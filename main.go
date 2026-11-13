@@ -79,6 +79,9 @@ func (a *app) settingsViewForOS(c *ui.Context, goos string) {
 		ui.Column(c).Padding(24).Gap(12).Children(func() {
 			ui.Text(c, appName).FontSize(22).Bold()
 			ui.Text(c, "选中文本后，按住鼠标右键 0.5 秒即可翻译。").TextColor(t.TextMuted)
+			if goos == "darwin" {
+				ui.Text(c, "触控板可用两指按下并保持 0.5 秒。\n请在系统设置中启用双指辅助点按。").TextColor(t.TextMuted)
+			}
 			ui.Text(c, "Base URL").Bold()
 			ui.TextInput(c, &a.draft.BaseURL).Placeholder("例如 https://api.example.com/v1").Label("Base URL").Width(450)
 			ui.Text(c, "模型").Bold()

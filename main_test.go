@@ -62,6 +62,9 @@ func TestView(t *testing.T) {
 			if !settings.HasText(tc.want) || settings.HasText(tc.absent) {
 				t.Fatalf("settings texts = %q", settings.Texts())
 			}
+			if got, want := settings.HasText("触控板可用两指按下并保持 0.5 秒。"), tc.os == "darwin"; got != want {
+				t.Fatalf("touchpad instructions present = %v, want %v: %q", got, want, settings.Texts())
+			}
 		})
 	}
 }

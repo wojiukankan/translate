@@ -199,6 +199,8 @@ func (m *macMonitor) handleEvent(proxy uintptr, kind uint32, event uintptr) uint
 	}
 	switch kind {
 	case rightMouseDown:
+		// A trackpad's configured two-finger secondary click follows the
+		// same system event path as a mouse's right button.
 		if containsMac(m.popup, point) || containsMac(m.settings, point) {
 			return event
 		}

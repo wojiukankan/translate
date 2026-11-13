@@ -220,6 +220,8 @@ func TestCopyChecksNamedPasteboard(t *testing.T) {
 func TestMacMonitorEventReplay(t *testing.T) {
 	var replayed, released []uintptr
 	var reenabled int
+	var scheduled func()
+	var scheduledAfter time.Duration
 	api := &macAPI{
 		eventLocation: func(event uintptr) cgPoint { return cgPoint{X: float64(event), Y: 10} },
 		eventCopy:     func(event uintptr) uintptr { return event + 100 },
@@ -232,8 +234,11 @@ func TestMacMonitorEventReplay(t *testing.T) {
 	stopped := make(chan struct{}, 1)
 	m := &macMonitor{
 		api: api, runOnMain: func(fn func()) { fn() },
-		afterFunc: func(time.Duration, func()) *time.Timer { return nil },
-		onHold:    func() { holds <- struct{}{} }, onOutside: func() { outside <- struct{}{} },
+		afterFunc: func(delay time.Duration, fn func()) *time.Timer {
+			scheduledAfter, scheduled = delay, fn
+			return nil
+		},
+		onHold: func() { holds <- struct{}{} }, onOutside: func() { outside <- struct{}{} },
 		onStopped: func() { stopped <- struct{}{} }, tap: 99,
 	}
 	m.session.Store(1)
@@ -253,10 +258,10 @@ func TestMacMonitorEventReplay(t *testing.T) {
 	if m.handleEvent(1, rightMouseDown, 20) != 0 {
 		t.Fatal("long press down was not intercepted")
 	}
-	if m.timer != nil {
-		m.timer.Stop()
+	if scheduledAfter != 500*time.Millisecond || scheduled == nil {
+		t.Fatalf("hold timer = %v, callback present = %v", scheduledAfter, scheduled != nil)
 	}
-	m.fire(m.gesture.generation)
+	scheduled()
 	select {
 	case <-holds:
 	case <-time.After(time.Second):
@@ -340,6 +345,11 @@ func TestMacCoreGraphicsEvent(t *testing.T) {
 		t.Fatal("could not create a CoreGraphics mouse event")
 	}
 	defer api.release(event)
+	up := createMouse(0, rightMouseUp, want, 1)
+	if up == 0 {
+		t.Fatal("could not create a CoreGraphics mouse-up event")
+	}
+	defer api.release(up)
 	copy := api.eventCopy(event)
 	if copy == 0 {
 		t.Fatal("could not copy a CoreGraphics mouse event")
@@ -352,13 +362,16 @@ func TestMacCoreGraphicsEvent(t *testing.T) {
 	// Exercise the C callback and original-event replay with real CGEvent
 	// objects, but replace the posting function so no input reaches the user.
 	var replayed []cgPoint
+	var scheduled func()
+	holds := make(chan struct{}, 1)
 	testAPI := *api
 	testAPI.tapPostEvent = func(_ uintptr, event uintptr) {
 		replayed = append(replayed, api.eventLocation(event))
 	}
 	m := &macMonitor{
 		api: &testAPI, runOnMain: func(fn func()) { fn() },
-		afterFunc: func(time.Duration, func()) *time.Timer { return nil },
+		afterFunc: func(_ time.Duration, fn func()) *time.Timer { scheduled = fn; return nil },
+		onHold:    func() { holds <- struct{}{} },
 	}
 	m.session.Store(1)
 	const handle = uintptr(12345)
@@ -369,11 +382,26 @@ func TestMacCoreGraphicsEvent(t *testing.T) {
 	if got := callback(0, rightMouseDown, event, handle); got != 0 {
 		t.Fatalf("down returned %v, want suppression", got)
 	}
-	if got := callback(0, rightMouseUp, event, handle); got != event {
+	if got := callback(0, rightMouseUp, up, handle); got != up {
 		t.Fatalf("up returned %v, want original event", got)
 	}
 	if !reflect.DeepEqual(replayed, []cgPoint{want}) {
 		t.Fatalf("replayed event locations = %v", replayed)
+	}
+	if got := callback(0, rightMouseDown, event, handle); got != 0 || scheduled == nil {
+		t.Fatalf("held down returned %v or did not schedule a timer", got)
+	}
+	scheduled()
+	select {
+	case <-holds:
+	case <-time.After(time.Second):
+		t.Fatal("held CoreGraphics secondary-click event did not trigger")
+	}
+	if got := callback(0, rightMouseUp, up, handle); got != 0 {
+		t.Fatalf("held up returned %v, want suppression", got)
+	}
+	if len(replayed) != 1 {
+		t.Fatalf("held event was replayed: %v", replayed)
 	}
 
 	source := api.eventSource(0)
