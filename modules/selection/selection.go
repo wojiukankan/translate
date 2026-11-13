@@ -1,4 +1,4 @@
-// Package selection defines the selection and mouse gesture bridge.
+// Package selection defines the selection and mouse gesture contract.
 package selection
 
 import "github.com/egoist/mygo/native"
@@ -17,19 +17,14 @@ type Area struct {
 }
 
 // Monitor observes the right-button gesture and obtains the current selection.
-//
-//mygo:native
 type Monitor interface {
 	// Start begins monitoring until Stop. Callbacks are delivered to the UI thread.
-	//mygo:mainthread
 	Start(onHold func(), onOutside func(), onStopped func()) error
 
 	// SetAreas identifies our windows so their own right-clicks pass through.
-	//mygo:mainthread
 	SetAreas(popup Area, settings Area)
 
 	// Stop removes the system event tap.
-	//mygo:mainthread
 	Stop()
 
 	// SelectedText copies and returns the focused application's selected text.

@@ -2,5 +2,5 @@ package selectionmonitor
 
 import "translate/modules/selection"
 
-// New retains the existing macOS native module.
+// New uses the macOS implementation of the shared monitor contract.
 func New() (selection.Monitor, error) { return selection.NewMonitor() }

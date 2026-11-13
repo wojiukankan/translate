@@ -23,10 +23,9 @@ macOS 应用使用临时签名，未经过 Apple 公证。重新构建、移动�
 
 ## 开发与验证
 
-需要 Go 1.27.4 或更高版本；构建 macOS 原生模块还需要 Swift 6 和 Xcode Command Line Tools。
+需要 Go 1.27.4 或更高版本。macOS 的系统接口通过 Go 调用，不需要 Swift 工具链。
 
 ```sh
-go tool mygo native check ./modules/selection
 CGO_ENABLED=0 go test ./...
 go tool mygo vet .
 CGO_ENABLED=0 go test -tags sqlitego ./internal/translation
