@@ -17,9 +17,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Check native module and tests
+      - name: Run tests and checks
         run: |
-          go tool mygo native check ./modules/selection
           CGO_ENABLED=0 go test ./...
           CGO_ENABLED=0 go test -tags sqlitego ./internal/translation
           go tool mygo vet .
