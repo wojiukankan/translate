@@ -1,0 +1,46 @@
+name: Build and publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Check native module and tests
+        run: |
+          go tool mygo native check ./modules/selection
+          CGO_ENABLED=0 go test ./...
+          CGO_ENABLED=0 go test -tags sqlitego ./internal/translation
+          go tool mygo vet .
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go vet ./...
+      - name: Build macOS and Windows
+        run: |
+          go tool mygo build -platform darwin/universal,windows/amd64 -skip-installer -o build/release
+          python3 scripts/package_windows.py build/release/windows-amd64 build/release
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          选中文本后按住鼠标右键 0.5 秒，即可在鼠标附近显示译文。
+
+          - macOS：通用版 DMG，支持 Apple 芯片和 Intel；需要 macOS 13 或更高版本。首次使用须授予辅助功能权限，系统要求时还需输入监控权限。
+          - Windows：解压 ZIP 后运行程序。通过 Ctrl+C 获取选区，SQLite 集成在程序中，不需要额外的 SQLite DLL。
+          - 本版本未经过开发者签名或 Apple 公证。macOS Gatekeeper 和 Windows 安全软件可能给出提示。
+          - Windows 版本尚未完成真机功能及杀毒软件验证。
+          NOTES
+          gh release create "$GITHUB_REF_NAME" \
+            build/release/darwin-universal/*.dmg \
+            build/release/*-windows-amd64.zip \
+            --verify-tag --title "划词翻译 $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md"
