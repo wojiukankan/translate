@@ -20,7 +20,6 @@ jobs:
       - name: Run tests and checks
         run: |
           CGO_ENABLED=0 go test ./...
-          CGO_ENABLED=0 go test -tags sqlitego ./internal/translation
           go tool mygo vet .
           GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go vet ./...
       - name: Build macOS and Windows
@@ -34,6 +33,7 @@ jobs:
           cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
           选中文本后按住鼠标右键 0.5 秒，即可在鼠标附近显示译文。
 
+          - macOS 和 Windows 统一使用相同的缓存实现，兼容已有翻译缓存。
           - macOS：通用版 DMG，支持 Apple 芯片和 Intel；需要 macOS 13 或更高版本。首次使用须授予辅助功能权限，系统要求时还需输入监控权限。
           - macOS 触控板：启用双指辅助点按后，可尝试两指按下并保持 0.5 秒翻译；当前版本尚未在真实触控板上验证。
           - Windows：解压 ZIP 后运行程序。通过 Ctrl+C 获取选区，SQLite 集成在程序中，不需要额外的 SQLite DLL。

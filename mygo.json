@@ -1,7 +1,7 @@
 {
   "name": "划词翻译",
   "identifier": "com.example.translate",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "out": "build",
   "macos": { "infoPlist": { "LSUIElement": true } }
 }

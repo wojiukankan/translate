@@ -41,11 +41,35 @@ func TestSQLiteCachePersistsAcrossReopen(t *testing.T) {
 		t.Fatalf("updated value = %q, found=%t, err=%v", value, found, err)
 	}
 
+	t.Run("in-memory database", func(t *testing.T) {
+		memory, err := OpenSQLiteCache(ctx, ":memory:")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := memory.Put(ctx, "key", "内存译文"); err != nil {
+			t.Fatal(err)
+		}
+		if value, found, err := memory.Get(ctx, "key"); err != nil || !found || value != "内存译文" {
+			t.Fatalf("in-memory value = %q, found=%t, err=%v", value, found, err)
+		}
+		if err := memory.Close(); err != nil {
+			t.Fatal(err)
+		}
+		memory, err = OpenSQLiteCache(ctx, ":memory:")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer memory.Close()
+		if _, found, err := memory.Get(ctx, "key"); err != nil || found {
+			t.Fatalf("reopened in-memory key: found=%t, err=%v", found, err)
+		}
+	})
+
 	if runtime.GOOS != "darwin" {
 		return // The compatibility fixture needs the macOS MyGo native module.
 	}
 	t.Run("reads a MyGo SQLite database", func(t *testing.T) {
-		oldPath := filepath.Join(t.TempDir(), "旧缓存.sqlite")
+		oldPath := filepath.Join(t.TempDir(), "旧缓存 ?#%.sqlite")
 		old, err := sqlite.Open(ctx, oldPath, sqlite.OpenOptions{})
 		if err != nil {
 			t.Fatal(err)

@@ -28,7 +28,6 @@ macOS 应用使用临时签名，未经过 Apple 公证。重新构建、移动�
 ```sh
 CGO_ENABLED=0 go test ./...
 go tool mygo vet .
-CGO_ENABLED=0 go test -tags sqlitego ./internal/translation
 go tool mygo build -platform darwin/universal,windows/amd64 -skip-installer -o build/release
 python3 scripts/package_windows.py build/release/windows-amd64 build/release
 ```
